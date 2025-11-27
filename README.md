@@ -84,15 +84,27 @@ cd openaccounting && npm install && npm run build && npm link
 ## Uninstall
 
 ```bash
-# Remove the package
 npm uninstall -g openaccounting
-
-# Optional: Remove your data
-rm -rf ~/.openaccounting    # Attached documents
-rm oa.db oa-workspace.json  # Database & settings (in project folder)
 ```
 
-Your data is never uploaded anywhere — deleting these files removes everything.
+**Optional: Remove your data**
+
+Your data is stored locally in whichever folder you ran `oa` from:
+
+```
+~/.openaccounting/        # Attached documents (receipts, contracts)
+./oa.db                   # Your database (in the folder where you ran oa)
+./oa-workspace.json       # Settings (in the folder where you ran oa)
+```
+
+To delete everything:
+```bash
+rm -rf ~/.openaccounting                    # Remove attached documents
+cd /path/to/where/you/ran/oa                # Go to your project folder
+rm oa.db oa-workspace.json                  # Remove database & settings
+```
+
+Your data is never uploaded anywhere — it only exists on your machine.
 
 ---
 
