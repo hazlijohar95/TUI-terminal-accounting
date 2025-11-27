@@ -5,48 +5,42 @@
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                         User Interface                          │
-├──────────────────┬──────────────────┬───────────────────────────┤
-│   TUI Dashboard  │       CLI        │        REST API           │
-│   (Ink/React)    │   (Commander)    │       (Fastify)           │
-└────────┬─────────┴────────┬─────────┴─────────────┬─────────────┘
-         │                  │                       │
-         └──────────────────┼───────────────────────┘
-                            │
-┌───────────────────────────┴───────────────────────────────────┐
-│                        Core Layer                              │
-├───────────────┬───────────────┬───────────────┬───────────────┤
-│   Invoicing   │   Expenses    │   Contacts    │   Reports     │
-│               │               │               │               │
-├───────────────┴───────────────┴───────────────┴───────────────┤
-│                     Accounting Engine                          │
-│              (Double-entry, Chart of Accounts)                 │
-└───────────────────────────────┬───────────────────────────────┘
-                                │
-┌───────────────────────────────┴───────────────────────────────┐
-│                        Data Layer                              │
-├──────────────────────┬────────────────────────────────────────┤
-│      SQLite DB       │           Document Storage             │
-│   (better-sqlite3)   │        (~/.openaccounting/)            │
-└──────────────────────┴────────────────────────────────────────┘
-                                │
-┌───────────────────────────────┴───────────────────────────────┐
-│                    External Services                           │
-├──────────────────┬────────────────────┬───────────────────────┤
-│     OpenAI       │       Convex       │     Email (Resend)    │
-│   (AI Agent)     │   (Cloud Sync)     │   (Invoice Sending)   │
-└──────────────────┴────────────────────┴───────────────────────┘
+├──────────────────────────────────┬──────────────────────────────┤
+│         TUI Dashboard            │            CLI               │
+│          (Ink/React)             │         (Commander)          │
+└────────────────┬─────────────────┴──────────────┬───────────────┘
+                 │                                │
+                 └────────────────┬───────────────┘
+                                  │
+┌─────────────────────────────────┴───────────────────────────────┐
+│                        Core Layer                                │
+├───────────────┬───────────────┬───────────────┬─────────────────┤
+│   Invoicing   │   Expenses    │   Contacts    │    Reports      │
+│               │               │               │                 │
+├───────────────┴───────────────┴───────────────┴─────────────────┤
+│                     Accounting Engine                            │
+│              (Double-entry, Chart of Accounts)                   │
+└─────────────────────────────────┬───────────────────────────────┘
+                                  │
+┌─────────────────────────────────┴───────────────────────────────┐
+│                        Data Layer                                │
+├────────────────────────┬────────────────────────────────────────┤
+│       SQLite DB        │           Document Storage             │
+│    (better-sqlite3)    │        (~/.openaccounting/)            │
+└────────────────────────┴────────────────────────────────────────┘
+                                  │
+┌─────────────────────────────────┴───────────────────────────────┐
+│                    External Services (Optional)                  │
+├────────────────────────────────┬────────────────────────────────┤
+│            OpenAI              │         Email (Resend)         │
+│          (AI Agent)            │       (Invoice Sending)        │
+└────────────────────────────────┴────────────────────────────────┘
 ```
 
 ## Directory Structure
 
 ```
 src/
-├── api/                    # REST API
-│   ├── plugins/            # Fastify plugins (auth, rate limit)
-│   ├── routes/             # API endpoints
-│   ├── schemas/            # Zod validation schemas
-│   └── server.ts           # Server setup
-│
 ├── agent/                  # AI Agent
 │   ├── engine/             # Multi-step reasoning engine
 │   ├── memory/             # Semantic memory (embeddings)
@@ -113,7 +107,7 @@ await waitUntilExit();
 
 ### Database (`src/db/`)
 
-SQLite via [better-sqlite3](https://github.com/WiseLibs/better-sqlite3). Synchronous API for simplicity.
+SQLite via [better-sqlite3](https://github.com/WiseLibs/better-sqlite3). Synchronous API for simplicity. All data stays on your machine.
 
 **Key tables:**
 | Table | Purpose |
@@ -127,13 +121,11 @@ SQLite via [better-sqlite3](https://github.com/WiseLibs/better-sqlite3). Synchro
 | `documents` | Document metadata |
 | `settings` | Application configuration |
 
-**Encryption:**
-Sensitive fields (API keys, passwords) are encrypted with AES-256-GCM before storage:
-
-```typescript
-import { encrypt, decrypt } from "../db/encryption.js";
-const encrypted = encrypt(apiKey);
-const decrypted = decrypt(encrypted);
+**Data files:**
+```
+./oa.db                      Your database (all financial data)
+./oa-workspace.json          Workspace settings
+~/.openaccounting/documents/ Attached files (receipts, contracts)
 ```
 
 ### AI Agent (`src/agent/`)
@@ -172,21 +164,12 @@ createJournalEntry({
 });
 ```
 
-### REST API (`src/api/`)
-
-Optional REST API built with [Fastify](https://fastify.dev/):
-
-- **Authentication**: JWT with refresh tokens
-- **Rate limiting**: Configurable per-route limits
-- **Validation**: Zod schemas for request/response
-- **OpenAPI**: Auto-generated documentation
-
 ## Data Flow
 
 ### Invoice Creation
 
 ```
-User Input (TUI/CLI/API)
+User Input (TUI/CLI)
         ↓
     Validation (Zod)
         ↓
@@ -230,9 +213,8 @@ User: "What am I owed this month?"
 | Runtime | Node.js 18+ |
 | Language | TypeScript 5 |
 | TUI | Ink (React for terminal) |
-| API | Fastify |
 | Database | SQLite (better-sqlite3) |
-| AI | OpenAI GPT-4 |
+| AI | OpenAI GPT-4 (optional) |
 | PDF | PDFKit |
 | Excel | ExcelJS |
 | Validation | Zod |
@@ -244,11 +226,7 @@ Environment variables (validated by Zod in `src/config/env.ts`):
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `OPENAI_API_KEY` | No | Enables AI features |
-| `CONVEX_URL` | No | Cloud sync backend |
-| `JWT_SECRET` | For API | JWT signing key |
-| `JWT_REFRESH_SECRET` | For API | Refresh token key |
-| `DB_ENCRYPTION_KEY` | No | Field encryption key |
+| `OPENAI_API_KEY` | No | Enables AI chat features |
 | `NODE_ENV` | No | development/production |
 | `LOG_LEVEL` | No | error/warn/info/debug |
 
@@ -268,9 +246,3 @@ Environment variables (validated by Zod in `src/config/env.ts`):
 
 1. Define tool in `src/agent/tools/`
 2. Register in `src/agent/tools/index.ts`
-
-### Adding a New API Endpoint
-
-1. Create route in `src/api/routes/`
-2. Define schema in `src/api/schemas/`
-3. Register in `src/api/server.ts`
