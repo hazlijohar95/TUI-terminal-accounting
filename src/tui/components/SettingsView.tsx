@@ -38,9 +38,10 @@ type SettingKey =
   | "from_email"
   | "reply_to"
   | "resend_api_key"
+  | "openai_api_key"
   | "theme";
 
-type Category = "profile" | "financial" | "invoice" | "email" | "appearance";
+type Category = "profile" | "financial" | "invoice" | "email" | "ai" | "appearance";
 
 interface SettingField {
   key: SettingKey;
@@ -58,6 +59,7 @@ const CATEGORY_LABELS: Record<Category, { label: string; icon: string }> = {
   financial: { label: "Financial", icon: "◨" },
   invoice: { label: "Invoicing", icon: "◩" },
   email: { label: "Email", icon: "◪" },
+  ai: { label: "AI Assistant", icon: "◈" },
   appearance: { label: "Appearance", icon: "◫" },
 };
 
@@ -211,6 +213,16 @@ const settingFields: SettingField[] = [
     helpText: "Get your API key from resend.com/api-keys",
   },
 
+  // AI Assistant
+  {
+    key: "openai_api_key",
+    label: "OpenAI API Key",
+    placeholder: "sk-...",
+    masked: true,
+    category: "ai",
+    helpText: "Get your API key from platform.openai.com/api-keys. Enables AI chat features.",
+  },
+
   // Appearance
   {
     key: "theme",
@@ -222,7 +234,7 @@ const settingFields: SettingField[] = [
   },
 ];
 
-const CATEGORIES: Category[] = ["profile", "financial", "invoice", "email", "appearance"];
+const CATEGORIES: Category[] = ["profile", "financial", "invoice", "email", "ai", "appearance"];
 
 export function SettingsView({ width, height }: SettingsViewProps) {
   const theme = getEnhancedTheme();

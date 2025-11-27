@@ -81,6 +81,21 @@ cd openaccounting && npm install && npm run build && npm link
 
 ---
 
+## Uninstall
+
+```bash
+# Remove the package
+npm uninstall -g openaccounting
+
+# Optional: Remove your data
+rm -rf ~/.openaccounting    # Attached documents
+rm oa.db oa-workspace.json  # Database & settings (in project folder)
+```
+
+Your data is never uploaded anywhere — deleting these files removes everything.
+
+---
+
 ## Commands
 
 ```
@@ -129,6 +144,7 @@ Then you're in the dashboard.
 | `v` | Vault (documents) |
 | `r` | Reports |
 | `c` | Chat (AI) |
+| `s` | Settings |
 | `?` | Help |
 | `q` | Quit |
 
@@ -169,13 +185,13 @@ Then you're in the dashboard.
 
 Optional. Works without it — just skip if you don't need it.
 
-```bash
-# Add to your shell
-export OPENAI_API_KEY=sk-...
+**Setup (choose one):**
 
-# Or create .env file
-echo "OPENAI_API_KEY=sk-..." > .env
-```
+1. **In the app:** Press `s` for Settings → AI Assistant → Enter your key
+2. **Environment variable:** `export OPENAI_API_KEY=sk-...`
+3. **File:** Create `.env` with `OPENAI_API_KEY=sk-...`
+
+Get your key at [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
 
 Then press `c` in the app to chat:
 

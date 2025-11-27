@@ -25,20 +25,32 @@ export const ai = {
   maxTokens: 500,
   temperature: 0.7,
 
-  // Get API key from environment
+  // Get API key from environment or database setting
   getApiKey: (): string | undefined => {
-    return process.env.OPENAI_API_KEY;
+    // First check environment variable
+    if (process.env.OPENAI_API_KEY) {
+      return process.env.OPENAI_API_KEY;
+    }
+    // Then check database setting (lazy import to avoid circular deps)
+    try {
+      const { getSetting } = require("./db/index.js");
+      const dbKey = getSetting("openai_api_key");
+      if (dbKey) return dbKey;
+    } catch {
+      // Database not initialized yet
+    }
+    return undefined;
   },
 
   // Validate API key exists
   validateApiKey: (): boolean => {
-    const key = process.env.OPENAI_API_KEY;
-    return Boolean(key && key.length > 0);
+    const key = ai.getApiKey();
+    return Boolean(key && key.startsWith("sk-"));
   },
 
   // Get error message for missing API key
   getApiKeyError: (): string => {
-    return "OpenAI API key not configured. Run: oa config set api_key <your-key>";
+    return "OpenAI API key not configured. Set it in Settings (press 's') or create a .env file with OPENAI_API_KEY=sk-...";
   },
 };
 
