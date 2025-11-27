@@ -30,6 +30,11 @@ export function createExpense(data: {
   notes?: string;
   is_recurring?: boolean;
 }): Expense {
+  // Validate amount
+  if (data.amount <= 0) {
+    throw new Error("Expense amount must be greater than 0");
+  }
+
   const db = getDb();
 
   const result = db.prepare(`

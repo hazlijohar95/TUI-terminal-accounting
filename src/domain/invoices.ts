@@ -5,6 +5,7 @@ import {
 } from "./journal.js";
 import { getAccountByCode } from "./accounts.js";
 import { logger } from "../core/logger.js";
+import { money } from "../core/currency.js";
 
 const invoiceLogger = logger.child({ module: "invoices" });
 
@@ -90,6 +91,19 @@ export function createInvoice(data: CreateInvoiceData): Invoice {
       throw new Error(`Customer with ID ${data.customer_id} not found`);
     }
 
+    // Validate line items
+    if (!data.items || data.items.length === 0) {
+      throw new Error("Invoice must have at least one line item");
+    }
+    for (const item of data.items) {
+      if ((item.quantity || 1) <= 0) {
+        throw new Error(`Invalid quantity for item "${item.description}": must be greater than 0`);
+      }
+      if (item.unit_price < 0) {
+        throw new Error(`Invalid unit price for item "${item.description}": cannot be negative`);
+      }
+    }
+
     // Get next invoice number
     const prefix = getSetting("invoice_prefix") || "INV";
     const nextNum = parseInt(getSetting("next_invoice_number") || "1");
@@ -103,18 +117,23 @@ export function createInvoice(data: CreateInvoiceData): Invoice {
     const days = daysMatch ? parseInt(daysMatch[1]) : 30;
     const dueDate = data.due_date || new Date(new Date(date).getTime() + days * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
+    // Validate due date is not before invoice date
+    if (new Date(dueDate) < new Date(date)) {
+      throw new Error("Due date cannot be before invoice date");
+    }
+
     // Calculate totals
     let subtotal = 0;
     const items = data.items.map((item) => {
       const qty = item.quantity || 1;
-      const amount = qty * item.unit_price;
-      subtotal += amount;
+      const amount = money.multiply(qty, item.unit_price);
+      subtotal = money.add(subtotal, amount);
       return { ...item, quantity: qty, amount };
     });
 
     const taxRate = data.tax_rate ?? parseFloat(getSetting("tax_rate") || "0");
-    const taxAmount = subtotal * (taxRate / 100);
-    const total = subtotal + taxAmount;
+    const taxAmount = money.percent(subtotal, taxRate);
+    const total = money.add(subtotal, taxAmount);
 
     // Insert invoice with LHDN fields
     const currencyCode = data.currency_code || "MYR";
@@ -538,8 +557,8 @@ export function createCreditNote(data: CreateCreditNoteData): Invoice {
     }
 
     const taxRate = originalInvoice.tax_rate;
-    const taxAmount = subtotal * (taxRate / 100);
-    const total = subtotal + taxAmount;
+    const taxAmount = money.percent(subtotal, taxRate);
+    const total = money.add(subtotal, taxAmount);
 
     // Insert credit note
     const result = db.prepare(`
@@ -700,8 +719,8 @@ export function createDebitNote(data: CreateDebitNoteData): Invoice {
     });
 
     const taxRate = originalInvoice.tax_rate;
-    const taxAmount = subtotal * (taxRate / 100);
-    const total = subtotal + taxAmount;
+    const taxAmount = money.percent(subtotal, taxRate);
+    const total = money.add(subtotal, taxAmount);
 
     // Insert debit note
     const result = db.prepare(`

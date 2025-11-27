@@ -54,6 +54,11 @@ export interface RecordExpenseData {
 }
 
 export function recordPayment(data: RecordPaymentData): Payment {
+  // Validate amount
+  if (data.amount <= 0) {
+    throw new Error("Payment amount must be greater than 0");
+  }
+
   return withTransaction(() => {
     const db = getDb();
     const date = data.date || new Date().toISOString().split("T")[0];
@@ -128,6 +133,11 @@ export function recordPayment(data: RecordPaymentData): Payment {
 }
 
 export function recordExpense(data: RecordExpenseData): Payment {
+  // Validate amount
+  if (data.amount <= 0) {
+    throw new Error("Expense amount must be greater than 0");
+  }
+
   return withTransaction(() => {
     const db = getDb();
     const date = data.date || new Date().toISOString().split("T")[0];

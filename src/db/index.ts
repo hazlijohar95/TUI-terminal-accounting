@@ -492,9 +492,9 @@ function initSchema(db: Database.Database): void {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       invoice_id INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
       description TEXT NOT NULL,
-      quantity REAL NOT NULL DEFAULT 1,
-      unit_price REAL NOT NULL,
-      amount REAL NOT NULL,
+      quantity REAL NOT NULL DEFAULT 1 CHECK (quantity > 0),
+      unit_price REAL NOT NULL CHECK (unit_price >= 0),
+      amount REAL NOT NULL CHECK (amount >= 0),
       account_id INTEGER REFERENCES accounts(id),
       sort_order INTEGER DEFAULT 0
     );
@@ -504,7 +504,7 @@ function initSchema(db: Database.Database): void {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       date TEXT NOT NULL,
       type TEXT NOT NULL CHECK (type IN ('received', 'sent')),
-      amount REAL NOT NULL,
+      amount REAL NOT NULL CHECK (amount > 0),
       method TEXT DEFAULT 'bank' CHECK (method IN ('cash', 'bank', 'card', 'check', 'other')),
       reference TEXT,
       customer_id INTEGER REFERENCES customers(id),
@@ -525,7 +525,7 @@ function initSchema(db: Database.Database): void {
       date TEXT NOT NULL,
       vendor_id INTEGER REFERENCES vendors(id),
       account_id INTEGER NOT NULL REFERENCES accounts(id),
-      amount REAL NOT NULL,
+      amount REAL NOT NULL CHECK (amount > 0),
       description TEXT,
       reference TEXT,
       payment_id INTEGER REFERENCES payments(id),
@@ -715,7 +715,7 @@ function initSchema(db: Database.Database): void {
 }
 
 // Sensitive setting keys that should be encrypted
-const ENCRYPTED_SETTINGS = ["resend_api_key"];
+const ENCRYPTED_SETTINGS = ["resend_api_key", "openai_api_key"];
 
 // Helper to get setting
 export function getSetting(key: string): string | undefined {
