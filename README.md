@@ -4,9 +4,9 @@
 
 Your books, your machine. No cloud required.
 
-[![npm](https://img.shields.io/npm/v/openaccounting)](https://www.npmjs.com/package/openaccounting)
-[![license](https://img.shields.io/npm/l/openaccounting)](LICENSE)
-[![node](https://img.shields.io/node/v/openaccounting)](package.json)
+[![npm](https://img.shields.io/npm/v/openaccounting?style=flat)](https://www.npmjs.com/package/openaccounting)
+[![license](https://img.shields.io/npm/l/openaccounting?style=flat)](LICENSE)
+[![node](https://img.shields.io/node/v/openaccounting?style=flat)](package.json)
 
 ---
 
