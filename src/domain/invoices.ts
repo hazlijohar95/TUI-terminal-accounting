@@ -322,7 +322,26 @@ export function recordPaymentToInvoice(invoiceId: number, amount: number): Invoi
   const invoice = getInvoice(invoiceId);
   if (!invoice) return undefined;
 
-  const newPaid = invoice.amount_paid + amount;
+  // Validate invoice status - can't pay draft or cancelled invoices
+  if (invoice.status === "draft") {
+    throw new Error("Cannot record payment for a draft invoice. Please send the invoice first.");
+  }
+  if (invoice.status === "cancelled") {
+    throw new Error("Cannot record payment for a cancelled invoice.");
+  }
+  if (invoice.status === "paid") {
+    throw new Error("Invoice is already fully paid.");
+  }
+
+  // Validate payment amount doesn't exceed remaining balance
+  const remainingBalance = money.subtract(invoice.total, invoice.amount_paid);
+  if (amount > remainingBalance) {
+    throw new Error(
+      `Payment amount (${money.format(amount)}) exceeds remaining balance (${money.format(remainingBalance)})`
+    );
+  }
+
+  const newPaid = money.add(invoice.amount_paid, amount);
   let newStatus: Invoice["status"] = invoice.status;
 
   if (newPaid >= invoice.total) {
@@ -507,6 +526,29 @@ export function createCreditNote(data: CreateCreditNoteData): Invoice {
       throw new Error(`Original invoice with ID ${data.original_invoice_id} not found`);
     }
 
+    // Validate original invoice status for e-invoice compliance
+    if (originalInvoice.status === "draft") {
+      throw new Error("Cannot create credit note for a draft invoice. Please send the invoice first.");
+    }
+    if (originalInvoice.status === "cancelled") {
+      throw new Error("Cannot create credit note for a cancelled invoice.");
+    }
+
+    // Check 72-hour window for e-invoices (LHDN requirement)
+    if (originalInvoice.einvoice_status === "valid" && originalInvoice.einvoice_validated_at) {
+      const validatedAt = new Date(originalInvoice.einvoice_validated_at);
+      const now = new Date();
+      const hoursSinceValidation = (now.getTime() - validatedAt.getTime()) / (1000 * 60 * 60);
+
+      if (hoursSinceValidation > 72) {
+        throw new Error(
+          `Credit notes for validated e-invoices must be issued within 72 hours. ` +
+          `This invoice was validated ${Math.round(hoursSinceValidation)} hours ago. ` +
+          `Please contact LHDN for manual cancellation.`
+        );
+      }
+    }
+
     // Get customer info
     const customer = db.prepare("SELECT id, name FROM customers WHERE id = ?").get(originalInvoice.customer_id) as { id: number; name: string } | undefined;
     if (!customer) {
@@ -677,6 +719,29 @@ export function createDebitNote(data: CreateDebitNoteData): Invoice {
     const originalInvoice = getInvoice(data.original_invoice_id);
     if (!originalInvoice) {
       throw new Error(`Original invoice with ID ${data.original_invoice_id} not found`);
+    }
+
+    // Validate original invoice status for e-invoice compliance
+    if (originalInvoice.status === "draft") {
+      throw new Error("Cannot create debit note for a draft invoice. Please send the invoice first.");
+    }
+    if (originalInvoice.status === "cancelled") {
+      throw new Error("Cannot create debit note for a cancelled invoice.");
+    }
+
+    // Check 72-hour window for e-invoices (LHDN requirement)
+    if (originalInvoice.einvoice_status === "valid" && originalInvoice.einvoice_validated_at) {
+      const validatedAt = new Date(originalInvoice.einvoice_validated_at);
+      const now = new Date();
+      const hoursSinceValidation = (now.getTime() - validatedAt.getTime()) / (1000 * 60 * 60);
+
+      if (hoursSinceValidation > 72) {
+        throw new Error(
+          `Debit notes for validated e-invoices must be issued within 72 hours. ` +
+          `This invoice was validated ${Math.round(hoursSinceValidation)} hours ago. ` +
+          `Please contact LHDN for manual adjustment.`
+        );
+      }
     }
 
     // Get customer info

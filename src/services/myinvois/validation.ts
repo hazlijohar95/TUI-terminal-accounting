@@ -128,11 +128,36 @@ export function validateMSIC(code: string | undefined | null): ValidationResult 
     return { valid: false, error: "MSIC code must be 5 digits" };
   }
 
-  // Check if it exists in our common codes (for warning, not error)
-  // In production, this should validate against the full MSIC list
+  // Check if it exists in our known codes
   const isKnown = cleaned in COMMON_MSIC_CODES;
 
-  return { valid: true }; // Allow any 5-digit code, but could warn if not in known list
+  if (!isKnown) {
+    // Find similar codes for suggestion
+    const prefix = cleaned.substring(0, 2);
+    const suggestions = Object.entries(COMMON_MSIC_CODES)
+      .filter(([c]) => c.startsWith(prefix))
+      .slice(0, 3)
+      .map(([c, desc]) => `${c} (${desc})`)
+      .join(", ");
+
+    const suggestionText = suggestions
+      ? ` Similar codes: ${suggestions}`
+      : " Check MSIC 2008 list for valid codes.";
+
+    return {
+      valid: false,
+      error: `MSIC code "${cleaned}" not found in known codes.${suggestionText}`
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Get MSIC code description
+ */
+export function getMSICDescription(code: string): string | undefined {
+  return COMMON_MSIC_CODES[code];
 }
 
 /**
