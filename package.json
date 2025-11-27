@@ -19,7 +19,7 @@
     "start": "node dist/tui/dashboard-entry.js",
     "reset": "rm -rf oa.db oa-workspace.json ~/.openaccounting && echo '✓ Reset complete'",
     "fresh": "npm run build && npm run reset && npm run start",
-    "test": "node --test --experimental-strip-types tests/*.test.ts",
+    "test": "npx tsx --test tests/*.test.ts",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "format": "prettier --write src/",

@@ -150,6 +150,10 @@ describe("Invoices Domain", () => {
         items: [{ description: "Test", quantity: 1, unit_price: 100 }],
       });
 
+      // Send invoice first (required before payment)
+      const { updateInvoiceStatus } = await import("../dist/domain/invoices.js");
+      updateInvoiceStatus(invoice.id, "sent");
+
       // Record partial payment
       const updated = recordPaymentToInvoice(invoice.id, 50);
       assert.ok(updated, "Should return updated invoice");
@@ -158,7 +162,7 @@ describe("Invoices Domain", () => {
     });
 
     it("should mark as paid when fully paid", async () => {
-      const { createInvoice, recordPaymentToInvoice } = await import(
+      const { createInvoice, recordPaymentToInvoice, updateInvoiceStatus } = await import(
         "../dist/domain/invoices.js"
       );
       const { createCustomer } = await import("../dist/domain/customers.js");
@@ -174,6 +178,9 @@ describe("Invoices Domain", () => {
         due_date: "2024-02-15",
         items: [{ description: "Test", quantity: 1, unit_price: 100 }],
       });
+
+      // Send invoice first (required before payment)
+      updateInvoiceStatus(invoice.id, "sent");
 
       const updated = recordPaymentToInvoice(invoice.id, 100);
       assert.strictEqual(updated?.amount_paid, 100, "Amount paid should be 100");
