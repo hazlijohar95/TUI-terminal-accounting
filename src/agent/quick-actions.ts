@@ -378,12 +378,13 @@ export function mightBeQuickAction(input: string): boolean {
   const lower = input.toLowerCase();
 
   const quickPatterns = [
-    /^(?:record|add|log|spent|paid)\s+\$?\d/i,           // expense with amount first
-    /^(?:expense|payment)\s+/i,                          // starts with expense/payment
-    /^(?:create|new|make)\s+(?:an?\s+)?invoice/i,        // create invoice
-    /^invoice\s+[A-Z]/i,                                 // invoice [Name]
-    /^mark\s+inv/i,                                      // mark invoice
-    /^received\s+/i,                                     // received payment
+    /^(?:record|add|log|spent|paid)\s+(?:\$|rm\s?)?\d/i,  // expense with amount first
+    /^(?:record|add|log|spent|paid)\s+expense/i,          // record expense...
+    /^(?:expense|payment)\s+/i,                           // starts with expense/payment
+    /^(?:create|new|make)\s+(?:an?\s+)?invoice/i,         // create invoice
+    /^invoice\s+[A-Z]/i,                                  // invoice [Name]
+    /^mark\s+inv/i,                                       // mark invoice
+    /^received\s+/i,                                      // received payment
   ];
 
   return quickPatterns.some(p => p.test(lower));
