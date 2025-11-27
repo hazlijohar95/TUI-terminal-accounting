@@ -2,12 +2,14 @@
  * SuggestionsBar Component
  *
  * Clean, minimal suggestion display with inline keyboard hints.
+ * Enhanced with smart context-aware suggestions based on financial state.
  */
 
 import React from "react";
 import { Box, Text } from "ink";
 import { getEnhancedTheme } from "../design/theme.js";
 import { indicators } from "../design/tokens.js";
+import { getSuggestedQuestions, buildSmartContext } from "../../agent/smart-context.js";
 
 export interface Suggestion {
   key: string; // "1", "2", "3"
@@ -265,30 +267,113 @@ export function generateSuggestions(
     }
   }
 
-  // Default suggestions if nothing matched
+  // Default suggestions if nothing matched - use smart context
   if (suggestions.length === 0) {
-    suggestions.push(
-      {
-        key: "1",
-        label: "Financial summary",
-        action: "Give me a financial summary",
-        type: "question",
-      },
-      {
-        key: "2",
-        label: "Recent activity",
-        action: "What's my recent financial activity?",
-        type: "question",
-      },
-      {
-        key: "3",
-        label: "Quick insights",
-        action: "Any insights I should know about my finances?",
-        type: "insight",
+    try {
+      // Get smart suggestions based on financial state
+      const smartQuestions = getSuggestedQuestions();
+
+      // Map smart suggestions to our format
+      for (let i = 0; i < Math.min(smartQuestions.length, 3); i++) {
+        const question = smartQuestions[i];
+        // Determine type based on content
+        const type: Suggestion["type"] = question.toLowerCase().includes("create") ||
+                    question.toLowerCase().includes("add") ||
+                    question.toLowerCase().includes("send")
+          ? "action"
+          : question.toLowerCase().includes("insight") ||
+            question.toLowerCase().includes("trend") ||
+            question.toLowerCase().includes("why")
+          ? "insight"
+          : "question";
+
+        suggestions.push({
+          key: String(i + 1),
+          label: question,
+          action: question,
+          type,
+        });
       }
-    );
+    } catch {
+      // Fallback if smart context fails
+      suggestions.push(
+        {
+          key: "1",
+          label: "Financial summary",
+          action: "Give me a financial summary",
+          type: "question",
+        },
+        {
+          key: "2",
+          label: "Recent activity",
+          action: "What's my recent financial activity?",
+          type: "question",
+        },
+        {
+          key: "3",
+          label: "Quick insights",
+          action: "Any insights I should know about my finances?",
+          type: "insight",
+        }
+      );
+    }
   }
 
   // Limit to 3 suggestions max
   return suggestions.slice(0, 3);
+}
+
+/**
+ * Get proactive alert-based suggestions
+ * Call this when the chat view loads or after significant actions
+ */
+export function getAlertBasedSuggestions(): Suggestion[] {
+  try {
+    const context = buildSmartContext();
+    const suggestions: Suggestion[] = [];
+
+    // Generate suggestions based on alerts
+    for (const alert of context.alerts) {
+      if (alert.type === "critical") {
+        // Critical alerts get priority suggestions
+        if (alert.title.includes("Overdue")) {
+          suggestions.push({
+            key: String(suggestions.length + 1),
+            label: "Show overdue invoices",
+            action: "Show me all overdue invoices with details",
+            type: "action",
+          });
+        } else if (alert.title.includes("Cash")) {
+          suggestions.push({
+            key: String(suggestions.length + 1),
+            label: "Check cash flow",
+            action: "What's causing my cash flow issues?",
+            type: "insight",
+          });
+        }
+      } else if (alert.type === "warning") {
+        if (alert.title.includes("Loss")) {
+          suggestions.push({
+            key: String(suggestions.length + 1),
+            label: "Expense breakdown",
+            action: "Break down my expenses - where am I overspending?",
+            type: "insight",
+          });
+        } else if (alert.title.includes("Aged")) {
+          suggestions.push({
+            key: String(suggestions.length + 1),
+            label: "Collection help",
+            action: "Which customers need payment reminders?",
+            type: "action",
+          });
+        }
+      }
+
+      if (suggestions.length >= 3) break;
+    }
+
+    return suggestions;
+  } catch {
+    return [];
+  }
 }

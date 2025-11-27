@@ -11,6 +11,7 @@ import { listInvoices, getInvoiceSummary } from "../../domain/invoices.js";
 import { listCustomers } from "../../domain/customers.js";
 import { listPayments, getPaymentSummary } from "../../domain/payments.js";
 import { listAccounts } from "../../domain/accounts.js";
+import { buildSmartContext, type ContextAlert, type ContextInsight } from "../smart-context.js";
 
 export interface DatabaseContext {
   summary: {
@@ -77,10 +78,16 @@ export interface DatabaseContext {
   expenseAccounts: Array<{ code: string; name: string }>;
   incomeAccounts: Array<{ code: string; name: string }>;
   validInvoiceNumbers: string[];
+  // Smart context - alerts and insights
+  alerts: ContextAlert[];
+  insights: ContextInsight[];
 }
 
 export function getDatabaseContext(): DatabaseContext {
   const db = getDb();
+
+  // Get smart context for alerts and insights
+  const smartContext = buildSmartContext();
 
   // Get basic counts
   const customerCount = db.prepare("SELECT COUNT(*) as count FROM customers").get() as { count: number };
@@ -192,12 +199,43 @@ export function getDatabaseContext(): DatabaseContext {
     expenseAccounts,
     incomeAccounts,
     validInvoiceNumbers,
+    // Smart context
+    alerts: smartContext.alerts,
+    insights: smartContext.insights,
   };
 }
 
 export function buildDatabaseContextString(ctx: DatabaseContext): string {
-  // Start with schema awareness - CRITICAL for agent to know valid options
-  let text = `## IMPORTANT: Available Account Categories
+  let text = "";
+
+  // Lead with alerts - most important for proactive assistance
+  if (ctx.alerts && ctx.alerts.length > 0) {
+    const criticalAlerts = ctx.alerts.filter(a => a.type === "critical" || a.type === "warning");
+    if (criticalAlerts.length > 0) {
+      text += `## ⚠️ ALERTS REQUIRING ATTENTION\n`;
+      for (const alert of criticalAlerts) {
+        const icon = alert.type === "critical" ? "🔴" : "🟡";
+        text += `${icon} **${alert.title}**: ${alert.message}\n`;
+        if (alert.actionSuggestion) {
+          text += `   → Suggested action: ${alert.actionSuggestion}\n`;
+        }
+      }
+      text += `\n`;
+    }
+  }
+
+  // Add insights for proactive suggestions
+  if (ctx.insights && ctx.insights.length > 0) {
+    text += `## 📊 Key Insights\n`;
+    for (const insight of ctx.insights.slice(0, 3)) {
+      const arrow = insight.trend === "up" ? "↑" : insight.trend === "down" ? "↓" : "→";
+      text += `${arrow} **${insight.title}**: ${insight.description}\n`;
+    }
+    text += `\n`;
+  }
+
+  // Schema awareness - CRITICAL for agent to know valid options
+  text += `## IMPORTANT: Available Account Categories
 When recording expenses, you MUST use one of these exact account names:
 `;
   if (ctx.expenseAccounts.length > 0) {

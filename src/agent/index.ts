@@ -45,3 +45,20 @@ export {
   type EnhancedAgentResult,
 } from "./enhanced-runner.js";
 export { buildSystemPrompt, TASK_PROMPTS } from "./prompts/system-prompts.js";
+export {
+  buildSmartContext,
+  getQuickSummary,
+  getSuggestedQuestions,
+  getContextForQuery,
+  type SmartContext,
+  type FinancialMetrics,
+  type ContextAlert,
+  type ContextInsight,
+  type ActivitySummary,
+} from "./smart-context.js";
+export {
+  executeQuickAction,
+  mightBeQuickAction,
+  getQuickActionExamples,
+  type QuickActionResult,
+} from "./quick-actions.js";

@@ -320,6 +320,240 @@ export function getCategorizationSuggestions(limit: number = 20): Array<{
 /**
  * Get rule statistics
  */
+/**
+ * Built-in expense patterns for smart categorization
+ * These patterns match common expense types without requiring user-defined rules
+ */
+const BUILTIN_PATTERNS: Array<{
+  patterns: string[];
+  vendorPatterns?: string[];
+  accountCode: string;
+  category: string;
+  confidence: number;
+}> = [
+  // Office & Supplies
+  {
+    patterns: ["stationery", "office supplies", "paper", "printer", "ink", "toner", "pens", "folders"],
+    vendorPatterns: ["popular", "mr diy", "daiso", "stationery"],
+    accountCode: "5300",
+    category: "Office Supplies",
+    confidence: 0.85,
+  },
+  // Utilities
+  {
+    patterns: ["electricity", "water bill", "utility", "tnb", "air selangor", "syabas", "indah water"],
+    vendorPatterns: ["tenaga", "tnb", "air selangor", "syabas", "indah water", "telekom"],
+    accountCode: "5400",
+    category: "Utilities",
+    confidence: 0.9,
+  },
+  // Internet & Phone
+  {
+    patterns: ["internet", "broadband", "wifi", "phone bill", "mobile", "data plan", "celcom", "maxis", "digi", "unifi", "time"],
+    vendorPatterns: ["celcom", "maxis", "digi", "unifi", "time", "telekom", "u mobile", "yes"],
+    accountCode: "5410",
+    category: "Communications",
+    confidence: 0.9,
+  },
+  // Rent
+  {
+    patterns: ["rent", "rental", "lease", "office space", "sewa"],
+    accountCode: "5100",
+    category: "Rent",
+    confidence: 0.9,
+  },
+  // Software & Subscriptions
+  {
+    patterns: ["subscription", "saas", "software", "license", "cloud", "hosting", "domain", "annual fee"],
+    vendorPatterns: ["google", "microsoft", "adobe", "slack", "zoom", "github", "aws", "azure", "digital ocean", "godaddy", "namecheap"],
+    accountCode: "5320",
+    category: "Software & Subscriptions",
+    confidence: 0.85,
+  },
+  // Professional Services
+  {
+    patterns: ["consulting", "legal", "audit", "accounting", "advisory", "professional fee", "lawyer", "accountant"],
+    accountCode: "5600",
+    category: "Professional Services",
+    confidence: 0.85,
+  },
+  // Insurance
+  {
+    patterns: ["insurance", "premium", "coverage", "policy"],
+    vendorPatterns: ["allianz", "prudential", "aia", "great eastern", "tokio marine", "zurich", "takaful"],
+    accountCode: "5500",
+    category: "Insurance",
+    confidence: 0.9,
+  },
+  // Travel & Transport
+  {
+    patterns: ["petrol", "fuel", "parking", "toll", "grab", "taxi", "flight", "hotel", "travel", "mileage", "touch n go"],
+    vendorPatterns: ["petronas", "shell", "petron", "caltex", "plus", "grab", "airasia", "malaysia airlines"],
+    accountCode: "5200",
+    category: "Travel & Transport",
+    confidence: 0.85,
+  },
+  // Meals & Entertainment
+  {
+    patterns: ["meal", "lunch", "dinner", "breakfast", "food", "restaurant", "cafe", "coffee", "entertainment", "client meal"],
+    vendorPatterns: ["starbucks", "coffee bean", "secret recipe", "mcdonalds", "kfc", "foodpanda", "grabfood"],
+    accountCode: "5210",
+    category: "Meals & Entertainment",
+    confidence: 0.8,
+  },
+  // Marketing & Advertising
+  {
+    patterns: ["marketing", "advertising", "ads", "promotion", "branding", "facebook ads", "google ads", "social media"],
+    vendorPatterns: ["facebook", "google", "tiktok", "instagram"],
+    accountCode: "5700",
+    category: "Marketing & Advertising",
+    confidence: 0.85,
+  },
+  // Equipment & Assets
+  {
+    patterns: ["computer", "laptop", "monitor", "keyboard", "mouse", "furniture", "equipment", "hardware", "phone"],
+    vendorPatterns: ["apple", "dell", "lenovo", "hp", "asus", "samsung", "logitech", "ikea", "harvey norman"],
+    accountCode: "1500",
+    category: "Equipment",
+    confidence: 0.8,
+  },
+  // Bank Charges
+  {
+    patterns: ["bank charge", "bank fee", "transaction fee", "service charge", "atm fee", "transfer fee"],
+    vendorPatterns: ["maybank", "cimb", "public bank", "rhb", "hong leong", "ambank", "bank islam"],
+    accountCode: "5800",
+    category: "Bank Charges",
+    confidence: 0.95,
+  },
+  // Repairs & Maintenance
+  {
+    patterns: ["repair", "maintenance", "service", "fix", "replacement part"],
+    accountCode: "5310",
+    category: "Repairs & Maintenance",
+    confidence: 0.75,
+  },
+  // Training & Education
+  {
+    patterns: ["training", "course", "seminar", "workshop", "conference", "education", "certification"],
+    vendorPatterns: ["udemy", "coursera", "linkedin learning"],
+    accountCode: "5620",
+    category: "Training & Education",
+    confidence: 0.85,
+  },
+];
+
+/**
+ * Match expense against built-in patterns
+ */
+export function matchBuiltinPatterns(description: string, vendorName?: string): {
+  accountCode: string;
+  category: string;
+  confidence: number;
+} | null {
+  const descLower = description.toLowerCase();
+  const vendorLower = vendorName?.toLowerCase() || "";
+
+  let bestMatch: { accountCode: string; category: string; confidence: number } | null = null;
+  let bestConfidence = 0;
+
+  for (const rule of BUILTIN_PATTERNS) {
+    let matched = false;
+    let confidence = rule.confidence;
+
+    // Check description patterns
+    for (const pattern of rule.patterns) {
+      if (descLower.includes(pattern)) {
+        matched = true;
+        break;
+      }
+    }
+
+    // Check vendor patterns (bonus confidence)
+    if (rule.vendorPatterns && vendorLower) {
+      for (const pattern of rule.vendorPatterns) {
+        if (vendorLower.includes(pattern)) {
+          matched = true;
+          confidence = Math.min(confidence + 0.1, 0.98);
+          break;
+        }
+      }
+    }
+
+    if (matched && confidence > bestConfidence) {
+      bestConfidence = confidence;
+      bestMatch = {
+        accountCode: rule.accountCode,
+        category: rule.category,
+        confidence,
+      };
+    }
+  }
+
+  return bestMatch;
+}
+
+/**
+ * Smart categorization - combines user rules and built-in patterns
+ */
+export function smartCategorize(description: string, vendorName?: string): {
+  accountId?: number;
+  accountCode?: string;
+  accountName?: string;
+  category?: string;
+  confidence: number;
+  source: "user_rule" | "builtin" | "none";
+} {
+  const db = getDb();
+
+  // First try user-defined rules (highest priority)
+  const userMatch = matchExpense(description, vendorName);
+  if (userMatch && userMatch.confidence >= 0.7) {
+    return {
+      accountId: userMatch.rule.account_id,
+      accountCode: userMatch.rule.account_code,
+      accountName: userMatch.rule.account_name,
+      confidence: userMatch.confidence,
+      source: "user_rule",
+    };
+  }
+
+  // Then try built-in patterns
+  const builtinMatch = matchBuiltinPatterns(description, vendorName);
+  if (builtinMatch) {
+    // Look up the account by code
+    const account = db.prepare(
+      "SELECT id, code, name FROM accounts WHERE code = ?"
+    ).get(builtinMatch.accountCode) as { id: number; code: string; name: string } | undefined;
+
+    if (account) {
+      return {
+        accountId: account.id,
+        accountCode: account.code,
+        accountName: account.name,
+        category: builtinMatch.category,
+        confidence: builtinMatch.confidence,
+        source: "builtin",
+      };
+    }
+  }
+
+  // If user rule exists but with lower confidence, still return it
+  if (userMatch) {
+    return {
+      accountId: userMatch.rule.account_id,
+      accountCode: userMatch.rule.account_code,
+      accountName: userMatch.rule.account_name,
+      confidence: userMatch.confidence,
+      source: "user_rule",
+    };
+  }
+
+  return {
+    confidence: 0,
+    source: "none",
+  };
+}
+
 export function getRuleStats(): {
   total_rules: number;
   rules_with_matches: number;
