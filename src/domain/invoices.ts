@@ -941,3 +941,217 @@ export function canIssueCreditNote(invoiceId: number): { allowed: boolean; reaso
 
   return { allowed: true };
 }
+
+// ============================================================================
+// Bulk Operations
+// ============================================================================
+
+/**
+ * Delete an invoice
+ * Only drafts can be deleted. Sent/paid invoices must be cancelled instead.
+ */
+export function deleteInvoice(invoiceIdOrNumber: number | string): { success: boolean; error?: string } {
+  const db = getDb();
+  const invoice = getInvoice(invoiceIdOrNumber);
+
+  if (!invoice) {
+    return { success: false, error: "Invoice not found" };
+  }
+
+  // Only allow deleting draft invoices
+  if (invoice.status !== "draft") {
+    return {
+      success: false,
+      error: `Cannot delete invoice with status "${invoice.status}". Only draft invoices can be deleted.`,
+    };
+  }
+
+  // Don't delete if it has an e-invoice submission
+  if (invoice.einvoice_status && invoice.einvoice_status !== "none") {
+    return {
+      success: false,
+      error: "Cannot delete invoice with e-invoice submission history",
+    };
+  }
+
+  // Delete invoice lines first
+  db.prepare("DELETE FROM invoice_lines WHERE invoice_id = ?").run(invoice.id);
+
+  // Delete the invoice
+  db.prepare("DELETE FROM invoices WHERE id = ?").run(invoice.id);
+
+  logAudit("delete", "invoice", invoice.id, invoice, null);
+
+  return { success: true };
+}
+
+/**
+ * Cancel an invoice (for non-draft invoices)
+ */
+export function cancelInvoice(invoiceIdOrNumber: number | string, reason?: string): { success: boolean; error?: string } {
+  const invoice = getInvoice(invoiceIdOrNumber);
+
+  if (!invoice) {
+    return { success: false, error: "Invoice not found" };
+  }
+
+  // Can't cancel a paid invoice without a credit note
+  if (invoice.status === "paid") {
+    return {
+      success: false,
+      error: "Cannot cancel a paid invoice. Issue a credit note instead.",
+    };
+  }
+
+  // Can't cancel if already cancelled
+  if (invoice.status === "cancelled") {
+    return { success: false, error: "Invoice is already cancelled" };
+  }
+
+  // For e-invoices, check if cancellation is allowed
+  if (invoice.einvoice_status === "valid") {
+    return {
+      success: false,
+      error: "Cannot cancel a validated e-invoice. Issue a credit note instead.",
+    };
+  }
+
+  const db = getDb();
+  db.prepare(`
+    UPDATE invoices
+    SET status = 'cancelled', notes = COALESCE(notes || ' | ', '') || ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).run(reason ? `Cancelled: ${reason}` : "Cancelled", invoice.id);
+
+  logAudit("cancel", "invoice", invoice.id, { status: invoice.status }, { status: "cancelled" });
+
+  return { success: true };
+}
+
+/**
+ * Bulk delete invoices (only drafts)
+ */
+export function bulkDeleteInvoices(ids: number[]): {
+  success: number;
+  failed: number;
+  errors: Array<{ id: number; error: string }>;
+} {
+  const results = { success: 0, failed: 0, errors: [] as Array<{ id: number; error: string }> };
+
+  for (const id of ids) {
+    const result = deleteInvoice(id);
+    if (result.success) {
+      results.success++;
+    } else {
+      results.failed++;
+      results.errors.push({ id, error: result.error || "Unknown error" });
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Bulk cancel invoices
+ */
+export function bulkCancelInvoices(ids: number[], reason?: string): {
+  success: number;
+  failed: number;
+  errors: Array<{ id: number; error: string }>;
+} {
+  const results = { success: 0, failed: 0, errors: [] as Array<{ id: number; error: string }> };
+
+  for (const id of ids) {
+    const result = cancelInvoice(id, reason);
+    if (result.success) {
+      results.success++;
+    } else {
+      results.failed++;
+      results.errors.push({ id, error: result.error || "Unknown error" });
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Bulk update invoice status
+ */
+export function bulkUpdateStatus(ids: number[], status: Invoice["status"]): {
+  success: number;
+  failed: number;
+  errors: Array<{ id: number; error: string }>;
+} {
+  const results = { success: 0, failed: 0, errors: [] as Array<{ id: number; error: string }> };
+
+  for (const id of ids) {
+    try {
+      const updated = updateInvoiceStatus(id, status);
+      if (updated) {
+        results.success++;
+      } else {
+        results.failed++;
+        results.errors.push({ id, error: "Invoice not found" });
+      }
+    } catch (error) {
+      results.failed++;
+      results.errors.push({ id, error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Bulk mark invoices as sent
+ */
+export function bulkMarkAsSent(ids: number[]): {
+  success: number;
+  failed: number;
+  errors: Array<{ id: number; error: string }>;
+} {
+  return bulkUpdateStatus(ids, "sent");
+}
+
+/**
+ * Bulk mark invoices as paid
+ */
+export function bulkMarkAsPaid(ids: number[]): {
+  success: number;
+  failed: number;
+  errors: Array<{ id: number; error: string }>;
+} {
+  const results = { success: 0, failed: 0, errors: [] as Array<{ id: number; error: string }> };
+
+  for (const id of ids) {
+    const invoice = getInvoice(id);
+    if (!invoice) {
+      results.failed++;
+      results.errors.push({ id, error: "Invoice not found" });
+      continue;
+    }
+
+    if (invoice.status === "draft") {
+      results.failed++;
+      results.errors.push({ id, error: "Cannot mark draft invoice as paid" });
+      continue;
+    }
+
+    if (invoice.status === "paid") {
+      // Already paid, count as success
+      results.success++;
+      continue;
+    }
+
+    try {
+      // Record full payment
+      recordPaymentToInvoice(id, invoice.total - invoice.amount_paid);
+      results.success++;
+    } catch (error) {
+      results.failed++;
+      results.errors.push({ id, error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  }
+
+  return results;
+}

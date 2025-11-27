@@ -24,6 +24,21 @@ import {
   getCashFlow,
   getExpensesByCategory,
 } from "../domain/reports.js";
+import {
+  exportInvoices,
+  exportJournalEntries,
+  exportCustomers,
+  exportVendors,
+  exportExpenses,
+  exportPayments,
+  exportBalanceSheet,
+  exportProfitLoss,
+  exportARaging,
+  exportCashFlow,
+  exportSSTReturn,
+  exportAllData,
+  type ExportOptions,
+} from "../services/export.js";
 import { printSuccess, printError, printDim } from "./ui.js";
 import {
   printHeader,
@@ -124,6 +139,17 @@ function printHelp(): void {
   \x1b[2mIn chat mode, drop a file path to upload receipts/statements:\x1b[0m
   \x1b[2m  ~/Downloads/receipt.jpg\x1b[0m
   \x1b[2m  /path/to/statement.csv\x1b[0m
+
+\x1b[1mExport Data:\x1b[0m
+  export invoices      Export invoices to CSV/Excel
+  export journal       Export journal entries
+  export customers     Export customer list
+  export expenses      Export expenses
+  export payments      Export payments
+  export report <type> Export report (balance, pl, ar, cashflow, sst)
+  export all           Export all data to Excel workbook
+
+  Options: --format csv|xlsx --from YYYY-MM-DD --to YYYY-MM-DD --output <path>
 
 \x1b[1mSetup & Config:\x1b[0m
   init                 Run setup wizard
@@ -676,7 +702,7 @@ const ENTITY_ALIASES: Record<string, string> = {
 };
 
 // Valid actions for fuzzy matching
-const VALID_ACTIONS = ["create", "new", "list", "ls", "view", "show", "add", "record", "send", "paid", "delete", "rm", "search", "report", "rep", "help", "dashboard", "dash", "ask", "chat", "init", "config", "backup", "restore"];
+const VALID_ACTIONS = ["create", "new", "list", "ls", "view", "show", "add", "record", "send", "paid", "delete", "rm", "search", "report", "rep", "help", "dashboard", "dash", "ask", "chat", "init", "config", "backup", "restore", "export"];
 
 // Simple fuzzy match - find closest action
 function fuzzyMatch(input: string): string | null {
@@ -982,9 +1008,97 @@ async function executeCommand(cmdArgs: string[]): Promise<void> {
       break;
     }
 
+    case "export": {
+      // Export data
+      const exportType = entity;
+      const exportFlags = parseFlags(restArgs);
+      const format = (exportFlags.format || "csv") as "csv" | "xlsx";
+      const outputPath = exportFlags.output || exportFlags.o || process.cwd();
+
+      const exportOptions: ExportOptions = {
+        format,
+        outputPath,
+        dateFrom: exportFlags.from,
+        dateTo: exportFlags.to,
+      };
+
+      let result;
+
+      switch (exportType) {
+        case "invoices":
+        case "inv":
+          result = await exportInvoices(exportOptions);
+          break;
+        case "journal":
+        case "entries":
+          result = await exportJournalEntries(exportOptions);
+          break;
+        case "customers":
+        case "cust":
+          result = await exportCustomers(exportOptions);
+          break;
+        case "vendors":
+        case "vend":
+          result = await exportVendors(exportOptions);
+          break;
+        case "expenses":
+        case "exp":
+          result = await exportExpenses(exportOptions);
+          break;
+        case "payments":
+        case "pay":
+          result = await exportPayments(exportOptions);
+          break;
+        case "report": {
+          const reportType = restArgs[0];
+          switch (reportType) {
+            case "balance":
+              result = await exportBalanceSheet({ ...exportOptions, asOfDate: exportFlags.to });
+              break;
+            case "pl":
+              result = await exportProfitLoss(exportOptions);
+              break;
+            case "ar":
+              result = await exportARaging(exportOptions);
+              break;
+            case "cashflow":
+              result = await exportCashFlow(exportOptions);
+              break;
+            case "sst":
+              result = await exportSSTReturn(exportOptions);
+              break;
+            default:
+              printError("Unknown report type. Use: balance, pl, ar, cashflow, sst");
+              return;
+          }
+          break;
+        }
+        case "all":
+          result = await exportAllData({ ...exportOptions, format: "xlsx" });
+          break;
+        default:
+          printError("Unknown export type");
+          printDim("Export: invoices, journal, customers, vendors, expenses, payments, report <type>, all");
+          return;
+      }
+
+      if (result.success) {
+        if (result.filePath) {
+          printSuccess(`Exported ${result.rowCount || 0} rows to: ${result.filePath}`);
+        } else if (result.rowCount === 0) {
+          printDim("No data to export");
+        } else {
+          printSuccess(`Export ready: ${result.rowCount} rows`);
+        }
+      } else {
+        printError(`Export failed: ${result.error}`);
+      }
+      break;
+    }
+
     default:
       printError(`Unknown command: ${action || "(none)"}`);
-      printDim("Commands: create, list, view, add, record, send, paid, delete, report, ask, chat, config");
+      printDim("Commands: create, list, view, add, record, send, paid, delete, report, export, ask, chat, config");
   }
 }
 

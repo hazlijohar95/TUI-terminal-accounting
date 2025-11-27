@@ -286,12 +286,56 @@ function KeyValueRow({ label, value, labelWidth = 12 }: KeyValueRowProps) {
 // Main Component
 // ============================================================================
 
+// Date filter presets
+type DateFilter = "all" | "today" | "week" | "month" | "quarter" | "year";
+const DATE_FILTER_LABELS: Record<DateFilter, string> = {
+  all: "All Time",
+  today: "Today",
+  week: "This Week",
+  month: "This Month",
+  quarter: "This Quarter",
+  year: "This Year",
+};
+
+function getDateRange(filter: DateFilter): { from?: string; to?: string } {
+  const today = new Date();
+  const toDate = today.toISOString().split("T")[0];
+
+  switch (filter) {
+    case "today":
+      return { from: toDate, to: toDate };
+    case "week": {
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - today.getDay());
+      return { from: weekStart.toISOString().split("T")[0], to: toDate };
+    }
+    case "month": {
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      return { from: monthStart.toISOString().split("T")[0], to: toDate };
+    }
+    case "quarter": {
+      const quarter = Math.floor(today.getMonth() / 3);
+      const quarterStart = new Date(today.getFullYear(), quarter * 3, 1);
+      return { from: quarterStart.toISOString().split("T")[0], to: toDate };
+    }
+    case "year": {
+      const yearStart = new Date(today.getFullYear(), 0, 1);
+      return { from: yearStart.toISOString().split("T")[0], to: toDate };
+    }
+    default:
+      return {};
+  }
+}
+
 export function InvoiceList({ width, height }: InvoiceListProps) {
   const theme = getEnhancedTheme();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [focusArea, setFocusArea] = useState<FocusArea>("list");
   const [activeField, setActiveField] = useState<FormField>("customer");
+
+  // Date filter
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
 
   // Detail view state
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
@@ -366,7 +410,11 @@ export function InvoiceList({ width, height }: InvoiceListProps) {
   }, [items]);
 
   const loadInvoices = () => {
-    const invs = listInvoices({});
+    const dateRange = getDateRange(dateFilter);
+    const invs = listInvoices({
+      from_date: dateRange.from,
+      to_date: dateRange.to,
+    });
     setInvoices(invs);
     setUnlinkedDocs(getUnlinkedDocuments());
     if (selectedInvoice && invs.length > 0) {
@@ -374,6 +422,11 @@ export function InvoiceList({ width, height }: InvoiceListProps) {
       setSelectedInvoice(updated || null);
     }
   };
+
+  // Reload when date filter changes
+  useEffect(() => {
+    loadInvoices();
+  }, [dateFilter]);
 
   useEffect(() => {
     loadInvoices();
@@ -564,6 +617,14 @@ export function InvoiceList({ width, height }: InvoiceListProps) {
       }
       if (key.downArrow || input === "j") {
         setSelectedIndex((prev) => Math.min(invoices.length - 1, prev + 1));
+      }
+      // Date filter cycling with 'f'
+      if (input === "f") {
+        const filters: DateFilter[] = ["all", "today", "week", "month", "quarter", "year"];
+        const currentIdx = filters.indexOf(dateFilter);
+        const nextIdx = (currentIdx + 1) % filters.length;
+        setDateFilter(filters[nextIdx]);
+        setSelectedIndex(0);
       }
       if (input === "n") {
         setFocusArea("form");
@@ -853,12 +914,19 @@ export function InvoiceList({ width, height }: InvoiceListProps) {
         {/* Divider */}
         <Text color={theme.semantic.border}>{"─".repeat(listWidth - 4)}</Text>
 
+        {/* Date Filter Badge */}
+        <Box marginBottom={1}>
+          <Text color={theme.semantic.info}>◷ </Text>
+          <Text color={theme.semantic.warning}>{DATE_FILTER_LABELS[dateFilter]}</Text>
+          <Text color={theme.semantic.textMuted}> ({invoices.length})</Text>
+        </Box>
+
         {/* Hints */}
         <Box marginY={1}>
           <Text color={theme.semantic.textMuted}>
             <Text color={theme.semantic.success}>n</Text> new
             <Text color={theme.semantic.textMuted}> • </Text>
-            j/k ↕ • v view • s send • p pay • <Text color={theme.semantic.info}>e</Text> e-inv
+            <Text color={theme.semantic.info}>f</Text> filter • j/k ↕ • s send
           </Text>
         </Box>
 
