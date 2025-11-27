@@ -141,7 +141,9 @@ export async function init(options: { silent?: boolean; demo?: boolean } = {}): 
     },
   };
 
-  cliLogger.debug("Creating workspace directories");
+  if (!silent) {
+    cliLogger.debug("Creating workspace directories");
+  }
   await mkdir("data", { recursive: true });
   await mkdir("ledger", { recursive: true });
   await writeFile("oa-workspace.json", JSON.stringify(config, null, 2));
@@ -161,10 +163,14 @@ export async function init(options: { silent?: boolean; demo?: boolean } = {}): 
   // Seed demo data if requested
   if (demo) {
     seedSampleData();
-    cliLogger.info("Demo data added (sample customers, vendors, invoices, expenses)");
+    if (!silent) {
+      cliLogger.info("Demo data added (sample customers, vendors, invoices, expenses)");
+    }
   }
 
-  cliLogger.info({ configFile: "oa-workspace.json" }, "Workspace initialized");
+  if (!silent) {
+    cliLogger.info({ configFile: "oa-workspace.json" }, "Workspace initialized");
+  }
   return true;
 }
 
