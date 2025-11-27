@@ -1,6 +1,6 @@
 {
   "name": "openaccounting",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Terminal-native accounting software with AI-powered features for freelancers and small businesses",
   "type": "module",
   "main": "dist/index.js",

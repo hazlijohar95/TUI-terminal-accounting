@@ -1,6 +1,6 @@
 /**
- * Grid component - Main spreadsheet grid with virtual scrolling
- * Enhanced with cell reference highlighting
+ * Grid component - Main spreadsheet grid with visible borders
+ * Enhanced with cell reference highlighting and Excel-like grid lines
  */
 
 import React, { useMemo } from "react";
@@ -10,6 +10,10 @@ import { ColumnHeader } from "./ColumnHeader.js";
 import { RowHeader } from "./RowHeader.js";
 import { CellAddress, CellData, Viewport, addressToRef } from "../core/types.js";
 import { extractCellReferences, getCellReferenceColor, ParsedReference } from "../core/FormulaParser.js";
+
+// Grid line colors
+const GRID_COLOR = "#585b70";
+const HEADER_BG = "#313244";
 
 export interface GridProps {
   viewport: Viewport;
@@ -46,35 +50,62 @@ export function Grid({
     return getCellReferenceColor(addr, cellReferences);
   };
 
+  // Calculate total columns
+  const colCount = viewport.endCol - viewport.startCol + 1;
+
+  // Build horizontal border line
+  const buildHorizontalBorder = (left: string, mid: string, right: string) => {
+    const parts: React.ReactNode[] = [];
+
+    // Left corner + row header section
+    parts.push(
+      <Text key="left" color={GRID_COLOR}>
+        {left}{"─".repeat(rowHeaderWidth - 1)}
+      </Text>
+    );
+
+    // Column sections
+    for (let i = 0; i < colCount; i++) {
+      const width = getColumnWidth(viewport.startCol + i);
+      const connector = i < colCount - 1 ? mid : right;
+      parts.push(
+        <Text key={`col-${i}`} color={GRID_COLOR}>
+          {"─".repeat(width)}{connector}
+        </Text>
+      );
+    }
+
+    return <Box key="border">{parts}</Box>;
+  };
+
   const rows: React.ReactNode[] = [];
 
-  // Render header row
+  // Top border: ┌───┬───┬───┐
   rows.push(
-    <ColumnHeader
-      key="header"
-      startCol={viewport.startCol}
-      endCol={viewport.endCol}
-      columnWidths={getColumnWidth}
-      activeCol={activeCell.col}
-      rowHeaderWidth={rowHeaderWidth}
-    />
+    <Box key="top-border">
+      {buildHorizontalBorder("┌", "┬", "┐")}
+    </Box>
   );
 
-  // Render separator
+  // Header row with vertical borders
   rows.push(
-    <Box key="separator">
-      <Text color="#45475a">{"─".repeat(rowHeaderWidth)}</Text>
-      {Array.from(
-        { length: viewport.endCol - viewport.startCol + 1 },
-        (_, i) => {
-          const width = getColumnWidth(viewport.startCol + i);
-          return (
-            <Text key={i} color="#45475a">
-              {"─".repeat(width)}
-            </Text>
-          );
-        }
-      )}
+    <Box key="header">
+      <Text color={GRID_COLOR}>│</Text>
+      <ColumnHeader
+        startCol={viewport.startCol}
+        endCol={viewport.endCol}
+        columnWidths={getColumnWidth}
+        activeCol={activeCell.col}
+        rowHeaderWidth={rowHeaderWidth - 1}
+      />
+      <Text color={GRID_COLOR}>│</Text>
+    </Box>
+  );
+
+  // Header separator: ├───┼───┼───┤
+  rows.push(
+    <Box key="header-separator">
+      {buildHorizontalBorder("├", "┼", "┤")}
     </Box>
   );
 
@@ -83,17 +114,23 @@ export function Grid({
     const isActiveRow = row === activeCell.row;
     const cells: React.ReactNode[] = [];
 
+    // Left border
+    cells.push(<Text key="left-border" color={GRID_COLOR}>│</Text>);
+
     // Row header
     cells.push(
       <RowHeader
-        key={`row-${row}`}
+        key={`row-header-${row}`}
         row={row}
-        width={rowHeaderWidth}
+        width={rowHeaderWidth - 1}
         isActive={isActiveRow}
       />
     );
 
-    // Cells
+    // Separator after row header
+    cells.push(<Text key="row-sep" color={GRID_COLOR}>│</Text>);
+
+    // Cells with borders
     for (let col = viewport.startCol; col <= viewport.endCol; col++) {
       const addr = { row, col };
       const isActive = row === activeCell.row && col === activeCell.col;
@@ -113,6 +150,11 @@ export function Grid({
           referenceColor={referenceColor}
         />
       );
+
+      // Right border after each cell
+      cells.push(
+        <Text key={`border-${col}`} color={GRID_COLOR}>│</Text>
+      );
     }
 
     rows.push(
@@ -122,8 +164,15 @@ export function Grid({
     );
   }
 
+  // Bottom border: └───┴───┴───┘
+  rows.push(
+    <Box key="bottom-border">
+      {buildHorizontalBorder("└", "┴", "┘")}
+    </Box>
+  );
+
   return (
-    <Box flexDirection="column" borderStyle="single" borderColor="#45475a">
+    <Box flexDirection="column">
       {rows}
     </Box>
   );
