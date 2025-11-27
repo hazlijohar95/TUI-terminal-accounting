@@ -10,6 +10,55 @@ Your books, your machine. No cloud required.
 
 ---
 
+## Why OpenAccounting?
+
+Most accounting software stores your financial data on their servers. You pay monthly fees, need internet to access your own books, and if they shut down — your data goes with them.
+
+**OpenAccounting is different.**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│   📁 Your data lives HERE → on YOUR computer                    │
+│                                                                 │
+│   Not on someone else's server. Not in "the cloud".             │
+│   Just a simple file you can backup, move, or delete.           │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### The Difference
+
+|   | OpenAccounting | Cloud Software (QuickBooks, Xero, etc.) |
+|---|----------------|----------------------------------------|
+| 💰 **Cost** | Free forever | $15-50/month ($180-600/year) |
+| 🌐 **Internet** | Works offline | Requires connection |
+| 🔒 **Privacy** | 100% private | They can access your data |
+| 📍 **Data location** | Your computer | Their servers |
+| 🏢 **If company shuts down** | Still works | Data at risk |
+| 💳 **Payment info required** | No | Yes |
+| 📧 **Account required** | No | Yes |
+
+### How It Works
+
+Your financial data is stored in a single file called `oa.db` — a [SQLite](https://sqlite.org) database. SQLite is the most widely deployed database in the world, used by every smartphone, browser, and operating system.
+
+```
+Your project folder:
+├── oa.db                 ← All your data (invoices, expenses, contacts)
+├── oa-workspace.json     ← Your settings
+└── ~/.openaccounting/
+    └── documents/        ← Attached receipts & files
+```
+
+**Want to backup?** Copy the file.
+**Want to move computers?** Copy the file.
+**Want to delete everything?** Delete the file.
+
+No export wizards. No vendor lock-in. No begging for your own data.
+
+---
+
 ## Install
 
 ```bash
