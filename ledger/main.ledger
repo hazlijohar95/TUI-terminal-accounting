@@ -1,0 +1,103 @@
+; OpenAccounting Sample Ledger
+; Generated for demo purposes
+
+2025/10/01 Monthly Salary
+    Income:Salary  $5000.00
+    Assets:Checking
+
+2025/10/02 Rent Payment
+    Expenses:Housing:Rent  $1500.00
+    Assets:Checking
+
+2025/10/04 Grocery Store
+    Expenses:Food:Groceries  $95.00
+    Assets:Checking
+
+2025/10/06 Electric Bill
+    Expenses:Utilities:Electric  $110.00
+    Assets:Checking
+
+2025/10/08 Restaurant
+    Expenses:Food:Restaurants  $45.00
+    Assets:Checking
+
+2025/10/10 Coffee Shop
+    Expenses:Food:Coffee  $12.00
+    Assets:Checking
+
+2025/10/12 Gas Station
+    Expenses:Transport:Gas  $48.00
+    Assets:Checking
+
+2025/10/15 Internet Service
+    Expenses:Utilities:Internet  $80.00
+    Assets:Checking
+
+2025/10/18 Grocery Store
+    Expenses:Food:Groceries  $88.00
+    Assets:Checking
+
+2025/10/20 Gym Membership
+    Expenses:Health:Fitness  $50.00
+    Assets:Checking
+
+2025/11/01 Monthly Salary
+    Income:Salary  $5000.00
+    Assets:Checking
+
+2025/11/02 Rent Payment
+    Expenses:Housing:Rent  $1500.00
+    Assets:Checking
+
+2025/11/03 Grocery Store
+    Expenses:Food:Groceries  $85.50
+    Assets:Checking
+
+2025/11/05 Electric Bill
+    Expenses:Utilities:Electric  $120.00
+    Assets:Checking
+
+2025/11/06 Coffee Shop
+    Expenses:Food:Coffee  $6.50
+    Assets:Checking
+
+2025/11/07 Internet Service
+    Expenses:Utilities:Internet  $80.00
+    Assets:Checking
+
+2025/11/08 Uber Ride
+    Expenses:Transport:Rideshare  $24.00
+    Assets:Checking
+
+2025/11/10 Restaurant Dinner
+    Expenses:Food:Restaurants  $65.00
+    Assets:Checking
+
+2025/11/12 Amazon Purchase
+    Expenses:Shopping:Online  $45.99
+    Assets:Checking
+
+2025/11/14 Gas Station
+    Expenses:Transport:Gas  $55.00
+    Assets:Checking
+
+2025/11/15 Freelance Payment
+    Income:Freelance  $800.00
+    Assets:Checking
+
+2025/11/16 Gym Membership
+    Expenses:Health:Fitness  $50.00
+    Assets:Checking
+
+2025/11/18 Netflix Subscription
+    Expenses:Entertainment:Streaming  $15.99
+    Assets:Checking
+
+2025/11/19 Coffee Shop
+    Expenses:Food:Coffee  $5.75
+    Assets:Checking
+
+2025/11/20 Grocery Store
+    Expenses:Food:Groceries  $120.00
+    Assets:Checking
+

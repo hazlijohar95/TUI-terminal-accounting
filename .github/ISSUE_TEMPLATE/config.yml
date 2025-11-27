@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://openaccounting.dev/docs
+    about: Check the documentation for guides and API reference
+  - name: Discussions
+    url: https://github.com/openaccounting/openaccounting/discussions
+    about: Ask questions and share ideas with the community
+  - name: Security Vulnerabilities
+    url: https://github.com/openaccounting/openaccounting/security/policy
+    about: Report security issues privately

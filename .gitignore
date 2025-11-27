@@ -1,0 +1,45 @@
+# Environment files (contain secrets)
+.env
+.env.local
+.env.*.local
+
+# Database files (user data)
+*.db
+*.db-shm
+*.db-wal
+oa-data.json
+oa-workspace.json
+
+# User-generated files
+*.xlsx
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage/
+
+# Convex
+.convex/
